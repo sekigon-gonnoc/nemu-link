@@ -87,26 +87,24 @@ CONFIG_ZMK_NEMU_LINK=y
 CONFIG_ZMK_BLE=n
 CONFIG_ZMK_USB=n
 CONFIG_ZMK_SPLIT_BLE=n
-CONFIG_ZMK_BATTERY_REPORTING=y
-CONFIG_SETTINGS=y
-CONFIG_ESB_MAX_PAYLOAD_LENGTH=64
-CONFIG_MBEDTLS_HEAP_SIZE=4096
 ```
 
 ### 2. 独自2.4GHz/BLE/USB構成
 
 BLE splitと独自2.4GHzを実行時に切り替えられる構成です。CentralのUSBから入力するためには左右間はBLEで接続する必要があります。`&nl_mode`はradio mode、`&out`はZMK HIDの出力先を切り替えます。
 
-各keyboard targetで既存のBLE split設定を維持し、nemu-linkとmode switchを有効にします。起動時から独自2.4GHzを使う場合は`BOOT_ESB`を設定します。USB HIDをPCへ出す側（BLE split central。keyboard構成によってはRight）のtargetでは`CONFIG_ZMK_USB=y`も有効にしてください。
+左右それぞれのkeyboard targetでBLEとBLE splitを有効にし、`CONFIG_ZMK_NEMU_LINK_MODE_SWITCH=y`を指定してください。このオプションがruntime切替を有効にし、`MODE_CONTROL`も自動選択します。
+
+起動時から独自2.4GHzを使う場合は`BOOT_ESB`を設定します。USB HIDをPCへ出す側（BLE split central。keyboard構成によってはRight）のtargetでは`CONFIG_ZMK_USB=y`も有効にしてください。
+
+キーボード側conf
 
 ```conf
 CONFIG_ZMK_NEMU_LINK=y
 CONFIG_ZMK_NEMU_LINK_MODE_SWITCH=y
-CONFIG_ZMK_NEMU_LINK_BOOT_ESB=y
+CONFIG_ZMK_NEMU_LINK_BOOT_ESB=y # 独自2.4GHzモードで起動する場合
 CONFIG_ZMK_BLE=y
 CONFIG_ZMK_SPLIT_BLE=y
-CONFIG_ESB_MAX_PAYLOAD_LENGTH=64
-CONFIG_MBEDTLS_HEAP_SIZE=4096
 ```
 
 ```yaml
@@ -115,23 +113,23 @@ include:
     shield: <left-shield>
     cmake-args: >-
       -DCONFIG_ZMK_NEMU_LINK_PERIPHERAL_ID=0
-      -DCONFIG_ZMK_NEMU_LINK_MODE_SWITCH=y
     artifact-name: keyboard-left-ble-nemu-link
 
   - board: <right-keyboard-board>
     shield: <right-shield>
     cmake-args: >-
       -DCONFIG_ZMK_NEMU_LINK_PERIPHERAL_ID=1
-      -DCONFIG_ZMK_NEMU_LINK_MODE_SWITCH=y
     artifact-name: keyboard-right-ble-nemu-link
 
   - board: nemu-link-dongle
     artifact-name: nemu-link-dongle
 ```
 
-mode switchを有効にしただけでは利用者向けの操作は追加されません。overlayから`<behaviors/nemu_link.dtsi>`をincludeして`nl_mode` behaviorを定義し、keymapへ必要なbindingを追加します。引数`0`はBLE、`1`独自2.4GHz、`2`はBLE/独自2.4GHz toggleです。USB HID出力先の切替にはZMKの`&out`を割り当てます。
+`MODE_SWITCH`を有効にしただけでは利用者向けの操作は追加されません。overlayから`<behaviors/nemu_link.dtsi>`をincludeして`nl_mode` behaviorを定義し、keymapへ必要なbindingを追加します。引数`0`はBLE、`1`独自2.4GHz、`2`はBLE/独自2.4GHz toggleです。USB HID出力先の切替にはZMKの`&out`を割り当てます。
 
 ```dts
+#include <behaviors/nemu_link.dtsi> // 初期キーマップに割り当てがない場合でも必須
+
 /* keymapの各layerにあるbindingsの例 */
 bindings = <
     &nl_mode 0   /* BLE radio mode */
@@ -145,9 +143,9 @@ bindings = <
 `&out OUT_USB`と`&out OUT_BLE`はradio modeを変更しません。たとえばBLE radio modeに切り替えたあと、`&out OUT_USB`を選ぶと、BLE split transportを使いながらRightのUSB HIDからPCへ入力できます。BLE HIDを使う場合に限り、PCなどのhostへBLE接続します。
 
 ドングルが不在の場合は、各キーボードごとに個別にBLEに切り替える処理が必要です。
-そのためには、各キーボードごとの特定のキーの長押しでモードを切り替えられるようにします。
+そのためには、各キーボードごとの特定のキーの長押しでモードを切り替えられるように、chordを有効にします。
 
-`CONFIG_ZMK_NEMU_LINK_MODE_CHORD=y`と、使うsourceのglobal key positionを記述したcontrol nodeを追加します。chord方式では`&nl_mode` bindingは不要です。`source-0`と`source-1`は各peripheral IDに対応します。
+keyboard側でchordを使うには`CONFIG_ZMK_NEMU_LINK_MODE_CHORD=y`と使うsourceのglobal key positionを記述したcontrol nodeを追加します。`source-0`と`source-1`は各peripheral IDに対応します。
 
 ```dts
 / {
@@ -248,8 +246,15 @@ dongleにはローカルのkey matrixがないため、受信後に表示・処�
 Studio UIをdongle経由で使う場合は、matrixへ`studio-rpc-usb-uart` snippetを指定してUSB CDC ACMと
 Studio RPC UARTを有効にします。
 
-2.4GHz/BLE構成の場合、BLE CentralとDongleでキーマップを共有するため、`CONFIG_ZMK_NEMU_LINK_STUDIO_ENDPOINT=y`が必要です。その場合はcentralだけでなく、接続する全peripheralも同じStudio同期receiverを
-実装したfirmwareでビルドしてください。
+2.4GHz/BLE構成の場合、BLE CentralとDongleでキーマップを共有するためには、ドングルとキーボード側に`CONFIG_ZMK_NEMU_LINK_STUDIO_ENDPOINT=y`が必要です。
+
+ドングルの名前は適宜変更してください。
+
+#### conf
+
+```conf
+CONFIG_USB_DEVICE_PRODUCT="nemu-link Dongle"
+```
 
 #### Trackballなどの入力デバイスを使う場合
 
@@ -309,12 +314,6 @@ Dongleのoverlayには、peripheralと同じ`reg`のproxyを定義し、そのpr
 };
 ```
 
-Dongleの`.conf`では`CONFIG_ZMK_POINTING=y`と`CONFIG_ZMK_INPUT_SPLIT=y`を有効にします。後者はoverlayに
-`zmk,input-split` nodeがあり、splitが有効な場合に既定で有効になりますが、他の設定で無効化されていないことを確認してください。
-`zmk,input-listener` nodeがoverlayにあると`CONFIG_ZMK_INPUT_LISTENER`も既定で有効になります。peripheral側もpointing supportを
-有効にし、各デバイスの`reg`をreceiver上の対応proxyと一致させてください。複数の入力デバイスを使う場合は、receiver内で`reg`が
-重複しない値を割り当て、それぞれのperipheral nodeとreceiver proxyで同じ値を使います。
-
 ## ファームウェアを書き込む
 
 ドングルのボタンを押しながらPCに接続するとUF2ブートローダが起動します。
@@ -323,7 +322,7 @@ Dongleの`.conf`では`CONFIG_ZMK_POINTING=y`と`CONFIG_ZMK_INPUT_SPLIT=y`を有
 
 キーボード側についてもUF2ファイルを書き込んでください。ブートローダの起動方法については各キーボードのドキュメントを確認してください。
 
-BMP Boostを使ったキーボードの場合、ブートローダのバージョンが古いと約700KB以上のUF2ファイルがうまく書き込めない場合があります。その際はブートローダ1.4.2以上に更新してください。
+BMP Boostを使ったキーボードの場合、ブートローダのバージョンが古いとWindowsから約700KB以上のUF2ファイルがうまく書き込めない場合があります。その際はコマンドプロンプトからcpコマンドで書き込むか、ブートローダ1.4.2以上に更新してください。
 
 
 ## 鍵情報を書き込む
@@ -355,25 +354,13 @@ chromeまたはEdgeで[nemu-link studio](https://nemu-link-studio.pages.dev/)を
 使うtargetの`.conf`へ次を追加し、Studio RPCとZephyr Settings/NVSを有効にします。
 
 ```conf
-CONFIG_ZMK_DYNAMIC_SETTINGS=y
 CONFIG_ZMK_STUDIO=y
-CONFIG_ZMK_STUDIO_RPC=y
-CONFIG_SETTINGS=y
-CONFIG_SETTINGS_NVS=y
+CONFIG_ZMK_DYNAMIC_SETTINGS=y
 ```
-
-NVSを使うflash領域はboard側で用意し、鍵保存partitionやbootloader、application partitionと重ならないことを確認してください。
-Dynamic SettingsはNVS partitionを自動で確保しません。受信RPCが大きい設定を使う場合は、必要に応じて
-`CONFIG_ZMK_STUDIO_RPC_RX_BUF_SIZE`も増やします。保存と復元の手順、overlay schemaの記述は
-[zmk-feature-dynamic-settings README](https://github.com/sekigon-gonnoc/zmk-feature-dynamic-settings)を参照してください。
-
-nemu-link Studioから設定を編集するfeatureは、firmware側にschemaとruntime処理を持ちます。
-すべてのfeature moduleは基盤の`zmk-feature-dynamic-settings`を必要とします。
-使わないfeature moduleまで追加する必要はありません。
 
 設定用のWEB UIもモジュール側に含まれているので、独自モジュールを作った場合でも、WEB UIを別途用意することなく、nemu-link Studioから変更できます。
 
-`west.yml`へ、基盤moduleと使うfeature moduleを追加します。
+`west.yml`へ、dynamic settings moduleと使うfeature moduleを追加します。
 次はMacroを使う場合の例です。`revision`は互換性のある公開tagまたはcommitへ置き換えます。
 
 ```yaml
