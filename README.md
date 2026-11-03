@@ -43,6 +43,14 @@ USBコネクタを基板に差し込み、表面と裏面をハンダ付けし�
 
 どの構成も既存のkeyboard board、shield、keymap、matrix、physical layoutを使います。keyboard peripheralはNordic nRF52系SoCが必要です。nemu-link dongleはreceiver、split central、USB HIDを担当します。
 
+### 参考
+
+- [2.4GHz only](https://github.com/sekigon-gonnoc/zmk-keyboard-torabo-tsuki/compare/main...nemu-link)
+- [2.4GHz only + Dynamic Setting](https://github.com/sekigon-gonnoc/zmk-keyboard-torabo-tsuki/compare/nemu-link...nemu-link+dyns)
+- [2.4GHz + BLE](https://github.com/sekigon-gonnoc/zmk-keyboard-torabo-tsuki/compare/nemu-link...nemu-link+ble)
+- [2.4GHz + BLE + Dynamic Setting](https://github.com/sekigon-gonnoc/zmk-keyboard-torabo-tsuki/compare/nemu-link+ble...nemu-link+ble+dyns)
+- [2.4GHz + BLE + Dynamic Settingいろいろ](https://github.com/sekigon-gonnoc/zmk-keyboard-torabo-tsuki/compare/nemu-link+ble...nemu-link+ble+dyns-full)
+
 ### 共通: West manifestとGitHub Actions
 
 既存configのWest manifestへZMK forkとnemu-link moduleを追加し、workspace rootで取得します。
@@ -125,7 +133,9 @@ include:
     artifact-name: nemu-link-dongle
 ```
 
-`MODE_SWITCH`を有効にしただけでは利用者向けの操作は追加されません。overlayから`<behaviors/nemu_link.dtsi>`をincludeして`nl_mode` behaviorを定義し、keymapへ必要なbindingを追加します。引数`0`はBLE、`1`独自2.4GHz、`2`はBLE/独自2.4GHz toggleです。USB HID出力先の切替にはZMKの`&out`を割り当てます。
+PERIPHERAL_IDは0または1です。Studio同期を有効にする場合は、`ZMK_NEMU_LINK_STUDIO_SOURCE`(デフォルトは1)と、BLE CentralのPERIPHERAL_IDを合わせてください。
+
+通信方式を切り替えるためには、`<behaviors/nemu_link.dtsi>`をincludeして`nl_mode` behaviorを定義し、keymapへ必要なbindingを追加します。引数`0`はBLE、`1`独自2.4GHz、`2`はBLE/独自2.4GHz toggleです。USB HID出力先の切替にはZMKの`&out`を割り当てます。
 
 ```dts
 #include <behaviors/nemu_link.dtsi> // 初期キーマップに割り当てがない場合でも必須
@@ -386,5 +396,6 @@ Combo、Encoder、Tap Dance、Input Processor、BLE Profileを使う場合も、
 | [`zmk-feature-dynamic-tap-dance`](https://github.com/sekigon-gonnoc/zmk-feature-dynamic-tap-dance) | Dynamic Settings、ZMK behavior local IDs | Tap/Hold/Double Tap等のslot設定 |
 | [`zmk-feature-dynamic-input-processor`](https://github.com/sekigon-gonnoc/zmk-feature-dynamic-input-processor) | Dynamic Settings、`CONFIG_ZMK_POINTING=y` | pointer感度、scroll/encoder mode等の設定 |
 | [`zmk-feature-dynamic-ble-profile`](https://github.com/sekigon-gonnoc/zmk-feature-dynamic-ble-profile) | Dynamic Settings、BLE、ZMK Studio RPC | BLE profileの選択・状態表示 |
+| [`zmk-feature-nemu-link-scan`](http://github.com/sekigon-gonnoc/zmk-feature-nemu-link-scan) | 2.4GHz帯の電波状況のスキャン |
 
 詳細なoverlay例、Kconfig、制約は各moduleのREADMEを参照してください。
