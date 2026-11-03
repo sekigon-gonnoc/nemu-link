@@ -396,6 +396,6 @@ Combo、Encoder、Tap Dance、Input Processor、BLE Profileを使う場合も、
 | [`zmk-feature-dynamic-tap-dance`](https://github.com/sekigon-gonnoc/zmk-feature-dynamic-tap-dance) | Dynamic Settings、ZMK behavior local IDs | Tap/Hold/Double Tap等のslot設定 |
 | [`zmk-feature-dynamic-input-processor`](https://github.com/sekigon-gonnoc/zmk-feature-dynamic-input-processor) | Dynamic Settings、`CONFIG_ZMK_POINTING=y` | pointer感度、scroll/encoder mode等の設定 |
 | [`zmk-feature-dynamic-ble-profile`](https://github.com/sekigon-gonnoc/zmk-feature-dynamic-ble-profile) | Dynamic Settings、BLE、ZMK Studio RPC | BLE profileの選択・状態表示 |
-| [`zmk-feature-nemu-link-scan`](http://github.com/sekigon-gonnoc/zmk-feature-nemu-link-scan) | 2.4GHz帯の電波状況のスキャン |
+| [`zmk-feature-nemu-link-scan`](http://github.com/sekigon-gonnoc/zmk-feature-nemu-link-scan) | Dynamic Settings, ZMK Studio RPC | 2.4GHz帯の電波状況のスキャン |
 
 詳細なoverlay例、Kconfig、制約は各moduleのREADMEを参照してください。
